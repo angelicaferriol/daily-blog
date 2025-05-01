@@ -1,14 +1,15 @@
 import os
 import json
 import datetime
+import re
 from github import Github
 
 # Setup GitHub API
 g = Github(os.environ.get("GITHUB_TOKEN"))
-repo_name = os.environ.get("angelicaferriol/Daily-Blog") 
-repo = g.get_repo("Daily-Blog")
+repo_name = os.environ.get("angelicaferriol/Daily-Blog")
+repo = g.get_repo(repo_name)
 
-# Check for existing streak data
+# Load or initialize streak data
 streak_data_path = "streak_data.json"
 streak_data = {
     "current_streak": 0,
@@ -20,126 +21,85 @@ streak_data = {
 try:
     streak_data_file = repo.get_contents(streak_data_path)
     streak_data = json.loads(streak_data_file.decoded_content.decode())
-except:
-    # File doesn't exist yet, we'll create it
-    pass
+except Exception:
+    streak_data_file = None  # Means file doesn't exist yet
 
-# Get all commits for the repository
-commits = repo.get_commits()
+# Fetch commit dates
 commit_dates = []
-
+commits = repo.get_commits()
 for commit in commits:
-    # Get date in YYYY-MM-DD format
-    commit_date = commit.commit.author.date.strftime("%Y-%m-%d")
-    commit_dates.append(commit_date)
-    
-    # Update daily commit count
-    if commit_date in streak_data["daily_commits"]:
-        streak_data["daily_commits"][commit_date] += 1
-    else:
-        streak_data["daily_commits"][commit_date] = 1
+    date_str = commit.commit.author.date.strftime("%Y-%m-%d")
+    commit_dates.append(date_str)
+    streak_data["daily_commits"][date_str] = streak_data["daily_commits"].get(date_str, 0) + 1
 
-# Sort dates in descending order (newest first)
-commit_dates.sort(reverse=True)
+commit_dates = sorted(set(commit_dates))
+if not commit_dates:
+    print("No commits found.")
+    exit(0)
 
-if commit_dates:
-    streak_data["last_commit_date"] = commit_dates[0]
-    
-    # Calculate current streak
-    current_streak = 0
-    today = datetime.datetime.now().date()
-    yesterday = today - datetime.timedelta(days=1)
-    
-    # Check if most recent commit is from today or yesterday to start counting streak
-    most_recent_date = datetime.datetime.strptime(commit_dates[0], "%Y-%m-%d").date()
-    
-    if most_recent_date == today or most_recent_date == yesterday:
-        current_date = most_recent_date
-        current_streak = 1
-        
-        # Count backwards from most recent commit
-        for i in range(1, 1000):  # 1000 is just a safe upper limit
-            check_date = (most_recent_date - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
-            if check_date in commit_dates:
-                current_streak += 1
-            else:
-                break
-                
-        streak_data["current_streak"] = current_streak
-        
-    # Calculate longest streak
-    longest_streak = 0
-    current_streak = 0
-    
-    # Sort dates in ascending order for streak calculation
-    sorted_dates = sorted(set(commit_dates))
-    
-    for i in range(len(sorted_dates)):
-        if i == 0:
-            current_streak = 1
-            continue
-            
-        # Check if dates are consecutive
-        prev_date = datetime.datetime.strptime(sorted_dates[i-1], "%Y-%m-%d").date()
-        curr_date = datetime.datetime.strptime(sorted_dates[i], "%Y-%m-%d").date()
-        
-        if (curr_date - prev_date).days == 1:
-            current_streak += 1
+# Update last commit date
+streak_data["last_commit_date"] = commit_dates[-1]
+
+# Calculate current streak
+today = datetime.datetime.now().date()
+yesterday = today - datetime.timedelta(days=1)
+most_recent_date = datetime.datetime.strptime(commit_dates[-1], "%Y-%m-%d").date()
+
+streak_data["current_streak"] = 0
+if most_recent_date in [today, yesterday]:
+    streak = 1
+    for i in range(1, 1000):
+        check_date = most_recent_date - datetime.timedelta(days=i)
+        if check_date.strftime("%Y-%m-%d") in commit_dates:
+            streak += 1
         else:
-            longest_streak = max(longest_streak, current_streak)
-            current_streak = 1
-            
-    longest_streak = max(longest_streak, current_streak)
-    streak_data["longest_streak"] = longest_streak
+            break
+    streak_data["current_streak"] = streak
 
-# Save updated streak data
-updated_content = json.dumps(streak_data, indent=2)
-try:
-    repo.update_file(
-        streak_data_path,
-        "Update streak data",
-        updated_content,
-        streak_data_file.sha if 'streak_data_file' in locals() else None
-    )
-except:
-    repo.create_file(
-        streak_data_path,
-        "Create streak data file",
-        updated_content
-    )
+# Calculate longest streak
+longest_streak = 1
+current_streak = 1
+for i in range(1, len(commit_dates)):
+    prev = datetime.datetime.strptime(commit_dates[i - 1], "%Y-%m-%d").date()
+    curr = datetime.datetime.strptime(commit_dates[i], "%Y-%m-%d").date()
+    if (curr - prev).days == 1:
+        current_streak += 1
+    else:
+        longest_streak = max(longest_streak, current_streak)
+        current_streak = 1
+longest_streak = max(longest_streak, current_streak)
+streak_data["longest_streak"] = longest_streak
 
-# Update README with streak information
+# Save streak_data.json
+streak_json = json.dumps(streak_data, indent=2)
+if streak_data_file:
+    repo.update_file(streak_data_path, "Update streak data", streak_json, streak_data_file.sha)
+else:
+    repo.create_file(streak_data_path, "Create streak data file", streak_json)
+
+# Update README.md
 try:
     readme = repo.get_contents("README.md")
-    readme_content = readme.decoded_content.decode()
-    
-    # Create or update streak section in README
-    streak_section = f"""
+    content = readme.decoded_content.decode()
 
+    # Create new streak section
+    streak_section = f"""<!-- STREAK-START -->
 ## 📅 Daily Commit Streak
 
 **Current Streak:** {streak_data["current_streak"]} days  
 **Longest Streak:** {streak_data["longest_streak"]} days  
 **Last Commit:** {streak_data["last_commit_date"]}
 
-<!-- Streak data updated by GitHub Actions -->
-"""
-    
-    if "## 📅 Daily Commit Streak" in readme_content:
-        # Replace existing section
-        start_idx = readme_content.find("## 📅 Daily Commit Streak")
-        end_idx = readme_content.find("<!-- Streak data updated by GitHub Actions -->", start_idx) + len("<!-- Streak data updated by GitHub Actions -->")
-        
-        new_readme = readme_content[:start_idx] + streak_section + readme_content[end_idx:]
+<!-- STREAK-END -->"""
+
+    pattern = r"<!-- STREAK-START -->(.*?)<!-- STREAK-END -->"
+    if re.search(pattern, content, flags=re.DOTALL):
+        new_content = re.sub(pattern, streak_section, content, flags=re.DOTALL)
     else:
-        # Add section to the end
-        new_readme = readme_content + "\n" + streak_section
-        
-    repo.update_file(
-        "README.md",
-        "Update streak information in README",
-        new_readme,
-        readme.sha
-    )
+        new_content = content.strip() + "\n\n" + streak_section
+
+    if new_content != content:
+        repo.update_file("README.md", "Update streak information", new_content, readme.sha)
+
 except Exception as e:
-    print(f"Error updating README: {e}")
+    print(f"README update failed: {e}")
