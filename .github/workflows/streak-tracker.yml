@@ -12,28 +12,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        name: Checkout code
       
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
-          
+      
+      - name: Verify Python installation
+        run: python --version
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install PyGithub
-          
-          - name: Update streak data
-          run: |
-            python .github/scripts/update_streak.py
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            GITHUB_REPOSITORY: ${{ github.repository }}
-          
+
+      - name: Verify PyGithub installation
+        run: pip show PyGithub
+
+      - name: Update streak data
+        run: |
+          python .github/scripts/update_streak.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
       - name: Commit changes
         run: |
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add streak_data.json README.md
-            git diff --quiet || git commit -m "Update streak data"
-            git push
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add streak_data.json README.md
+          git diff --quiet || git commit -m "Update streak data"
+          git push
+
+      - name: Verify Git installation
+        run: git --version
