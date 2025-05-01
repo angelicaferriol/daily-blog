@@ -23,6 +23,13 @@ try:
     streak_data = json.loads(streak_data_file.decoded_content.decode())
 except Exception:
     streak_data_file = None  # Means file doesn't exist yet
+    # Initialize streak_data if the file is missing
+    streak_data = {
+        "current_streak": 0,
+        "longest_streak": 0,
+        "last_commit_date": "",
+        "daily_commits": {}
+    }
 
 # Fetch commit dates
 commit_dates = []
