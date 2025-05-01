@@ -6,7 +6,7 @@ from github import Github
 
 # Setup GitHub API
 g = Github(os.environ.get("GITHUB_TOKEN"))
-repo_name = os.environ.get("angelicaferriol/Daily-Blog")
+repo_name = os.environ.get("GITHUB_REPOSITORY")
 repo = g.get_repo(repo_name)
 
 # Load or initialize streak data
