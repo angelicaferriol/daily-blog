@@ -1,11 +1,12 @@
 # About This Project
-This is my daily blog where I reflect on something I learned each day. **Writing = thinking**—I believe by writing about what I learn, I can process, solidify, and track my growth. It’s not about perfection, just consistent daily learning.
+This is my public daily blog where I document what I learn, think, and build each day. **Writing = thinking**—through writing I can process, solidify, and track my growth. 
 
 ## Why I Started This Blog?
+- Track my progress in CS, marine science, and personal projects
+- Practice clarity of thought through writing
+- Stay accountable and build a consistent learning habit
 
-- **Today I Learned:** Each post captures one key takeaway from the day, helping me stay present and intentional about my learning.
-- **Physical Journals Aren’t Enough:** I needed a consistent, public outlet to hold myself accountable.
-- **Public Accountability:** Sharing my reflections on GitHub helps me stay committed to daily writing and growth.
+I update this every day as part of my digital learning footprint.
 
 ## How to Use This?
 
