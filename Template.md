@@ -9,7 +9,7 @@
 - [Task 2: e.g., Reviewed one lesson]
 - [Task 3: e.g., Practiced coding]
 
-##### Key Insights  
+##### What I Learned
 - [Insight 1: Specific concept that clicked, or obstacle overcome]
 - [Insight 2: Lesson about workflow, mindset, or cross-disciplinary links]
 
